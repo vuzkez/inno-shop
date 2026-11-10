@@ -160,7 +160,7 @@ namespace Inno_Shop.Users.Infrastructure.Repositories
             return new User
             {
                 Id = appUser.Id,
-                Email = appUser.Email = null!,
+                Email = appUser.Email ?? string.Empty,
                 Name = appUser.Name,
                 IsActive = appUser.IsActive,
                 IsEmailConfirmed = appUser.EmailConfirmed,

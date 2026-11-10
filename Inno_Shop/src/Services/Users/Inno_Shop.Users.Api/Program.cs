@@ -1,6 +1,7 @@
 using System.Text;
 using Inno_Shop.Users.Application.Options;
 using Inno_Shop.Users.Infrastructure;
+using Inno_Shop.Users.Infrastructure.Seed;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
@@ -8,7 +9,7 @@ namespace Inno_Shop.Users.Api
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -41,7 +42,14 @@ namespace Inno_Shop.Users.Api
             app.UseAuthorization();
 
             app.MapControllers();
-            app.MapGet("/", () => "Hello World!");
+
+            if (app.Environment.IsDevelopment())
+            {
+                using (var scope = app.Services.CreateScope())
+                {
+                    await DbSeeder.SeedRolesAsync(scope.ServiceProvider);
+                }
+            }
 
             app.Run();
         }

@@ -18,9 +18,16 @@ namespace Inno_Shop.Users.Infrastructure
     {
         public static IServiceCollection AddInfrastructure(this IServiceCollection services,IConfiguration configuration)
         {
+            services.AddOptions<DatabaseOptions>()
+                .Bind(configuration.GetSection(DatabaseOptions.SectionName))
+                .Validate(x => !string.IsNullOrWhiteSpace(x.DefaultConnection), "Database Error: Connection string is missing.")
+                .ValidateOnStart();
+
+            var dbOptions = configuration.GetSection(DatabaseOptions.SectionName).Get<DatabaseOptions>();
+
             services.AddDbContext<UsersDbContext>(opts =>
             {
-                opts.UseSqlServer(configuration.GetConnectionString("DefaultConnection"));
+                opts.UseSqlServer(dbOptions!.DefaultConnection);
             });
 
             services.AddIdentityCore<ApplicationUser>(opts =>
@@ -48,8 +55,18 @@ namespace Inno_Shop.Users.Infrastructure
                     "JWT Error: ExpiryMinutes must be greater than 0 and less than or equal to 1440 (24 hours).")
                 .ValidateOnStart();
 
+            services.AddOptions<EmailOptions>()
+                .Bind(configuration.GetSection(EmailOptions.SectionName))
+                .Validate(x => !string.IsNullOrWhiteSpace(x.Host), "Email Error: Host is required.")
+                .Validate(x => !string.IsNullOrWhiteSpace(x.FromEmail), "Email Error: FromEmail is required.")
+                .Validate(x => !string.IsNullOrWhiteSpace(x.UserName), "Email Error: UserName is required.")
+                .Validate(x => !string.IsNullOrWhiteSpace(x.Password), "Email Error: Password is required.")
+                .Validate(x => !string.IsNullOrWhiteSpace(x.FromName), "Email Error: FromName is required.")
+                .ValidateOnStart();
+
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IJwtProvider, JwtProvider>();
+            services.AddScoped<IEmailService, EmailService>();
 
             return services;
         }
