@@ -1,1 +1,16 @@
-<Solution />
+<Solution>
+  <Folder Name="/Services/" />
+  <Folder Name="/Services/Products/">
+    <Project Path="src/Services/Products/Inno_Shop.Products.Api/Inno_Shop.Products.Api.csproj" Id="c173ab8c-c1d9-4eba-97c3-efd7bc2dfac4" />
+    <Project Path="src/Services/Products/Inno_Shop.Products.Application/Inno_Shop.Products.Application.csproj" />
+    <Project Path="src/Services/Products/Inno_Shop.Products.Domain/Inno_Shop.Products.Domain.csproj" />
+    <Project Path="src/Services/Products/Inno_Shop.Products.Infrastructure/Inno_Shop.Products.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Services/Users/">
+    <Project Path="src/Services/Users/Inno_Shop.Users.Api/Inno_Shop.Users.Api.csproj" Id="80704382-bce7-4e6a-a2a7-8caea25ccd56" />
+    <Project Path="src/Services/Users/Inno_Shop.Users.Application/Inno_Shop.Users.Application.csproj" />
+    <Project Path="src/Services/Users/Inno_Shop.Users.Domain/Inno_Shop.Users.Domain.csproj" />
+    <Project Path="src/Services/Users/Inno_Shop.Users.Infrastructure/Inno_Shop.Users.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Tests/" />
+</Solution>
