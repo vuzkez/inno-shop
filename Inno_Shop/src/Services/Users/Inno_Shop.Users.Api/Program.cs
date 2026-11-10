@@ -1,8 +1,8 @@
-using Inno_Shop.Users.Infrastructure.Identity;
-using Inno_Shop.Users.Infrastructure.Persistence;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
+using System.Text;
+using Inno_Shop.Users.Application.Options;
+using Inno_Shop.Users.Infrastructure;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Inno_Shop.Users.Api
 {
@@ -12,27 +12,35 @@ namespace Inno_Shop.Users.Api
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            builder.Services.AddDbContext<UsersDbContext>(opts =>
+            builder.Services.AddInfrastructure(builder.Configuration);
+            builder.Services.AddControllers();
+
+            var jwtOptions = builder.Configuration
+                .GetSection(JwtOptions.SectionName)
+                .Get<JwtOptions>();
+
+            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(opts =>
             {
-                opts.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+                opts.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    RoleClaimType = "role",
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.Zero,
+                    ValidateIssuer = true,
+                    ValidIssuer = jwtOptions!.Issuer,
+                    ValidateAudience = true,
+                    ValidAudience = jwtOptions!.Audience,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret))
+                };
             });
-
-            builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(opts =>
-            {
-                opts.Password.RequireDigit = true;
-                opts.Password.RequiredLength = 6;
-                opts.User.RequireUniqueEmail = true;
-                opts.Lockout.MaxFailedAccessAttempts = 5;
-                opts.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
-
-            }).AddEntityFrameworkStores<UsersDbContext>()
-            .AddDefaultTokenProviders();
 
             var app = builder.Build();
 
             app.UseAuthentication();
             app.UseAuthorization();
 
+            app.MapControllers();
             app.MapGet("/", () => "Hello World!");
 
             app.Run();
