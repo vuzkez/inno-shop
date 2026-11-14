@@ -13,5 +13,7 @@ namespace Inno_Shop.Users.Application.Options
         public string Password { get; set; } = string.Empty;
         public string FromEmail { get; set; } = string.Empty;
         public string FromName { get; set; } = string.Empty;
+        public string ConfirmEmailUrl { get; set; } = "http://localhost:5145/api/auth/confirm-email";
+        public string ResetPasswordUrl { get; set; } = "http://localhost:3000/reset-password";
     }
 }

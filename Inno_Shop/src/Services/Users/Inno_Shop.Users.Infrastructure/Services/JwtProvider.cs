@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Inno_Shop.Users.Application.Interfaces;
@@ -23,9 +21,10 @@ namespace Inno_Shop.Users.Infrastructure.Services
         {
             var claims = new List<Claim>
             {
-                new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                new(JwtRegisteredClaimNames.Sub, user.Id),
+                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new(JwtRegisteredClaimNames.Email, user.Email),
-                new(JwtRegisteredClaimNames.Name, user.Name), 
+                new(JwtRegisteredClaimNames.Name, user.Name),
                 new("role", user.Role.ToString())
             };
 

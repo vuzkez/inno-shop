@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Inno_Shop.Users.Application.Interfaces;
+﻿using Inno_Shop.Users.Application.Interfaces;
 using Inno_Shop.Users.Application.Options;
 using Inno_Shop.Users.Infrastructure.Identity;
 using Inno_Shop.Users.Infrastructure.Persistence;
@@ -11,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 
@@ -18,7 +16,7 @@ namespace Inno_Shop.Users.Infrastructure
 {
     public static class DependencyInjection
     {
-        public static IServiceCollection AddInfrastructure(this IServiceCollection services,IConfiguration configuration)
+        public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddOptions<DatabaseOptions>()
                 .Bind(configuration.GetSection(DatabaseOptions.SectionName))
@@ -26,9 +24,9 @@ namespace Inno_Shop.Users.Infrastructure
                 .ValidateOnStart();
 
             services.AddOptions<RedisOptions>()
-               .Bind(configuration.GetSection(RedisOptions.SectionName))
-               .Validate(x => !string.IsNullOrWhiteSpace(x.ConnectionString), "Redis Error: Connection string is missing.")
-               .ValidateOnStart();
+                .Bind(configuration.GetSection(RedisOptions.SectionName))
+                .Validate(x => !string.IsNullOrWhiteSpace(x.ConnectionString), "Redis Error: Connection string is missing.")
+                .ValidateOnStart();
 
             services.AddOptions<JwtOptions>()
                 .Bind(configuration.GetSection(JwtOptions.SectionName))
@@ -52,30 +50,39 @@ namespace Inno_Shop.Users.Infrastructure
                 .Validate(x => !string.IsNullOrWhiteSpace(x.FromName), "Email Error: FromName is required.")
                 .ValidateOnStart();
 
-            var dbOptions = configuration.GetSection(DatabaseOptions.SectionName).Get<DatabaseOptions>();
+            services.Configure<AdminSeedOptions>(configuration.GetSection(AdminSeedOptions.SectionName));
 
-            services.AddDbContext<UsersDbContext>(opts =>
+            services.AddDbContext<UsersDbContext>((sp, opts) =>
             {
-                opts.UseSqlServer(dbOptions!.DefaultConnection);
+                var db = sp.GetRequiredService<IOptions<DatabaseOptions>>().Value;
+                opts.UseSqlServer(db.DefaultConnection);
             });
 
             services.AddIdentityCore<ApplicationUser>(opts =>
             {
                 opts.Password.RequireDigit = true;
-                opts.Password.RequiredLength = 6;
+                opts.Password.RequireLowercase = true;
+                opts.Password.RequireUppercase = true;
+                opts.Password.RequireNonAlphanumeric = false;
+                opts.Password.RequiredLength = 8;
+
                 opts.User.RequireUniqueEmail = true;
+                opts.Lockout.AllowedForNewUsers = true;
                 opts.Lockout.MaxFailedAccessAttempts = 5;
                 opts.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
-
             })
             .AddRoles<ApplicationRole>()
             .AddEntityFrameworkStores<UsersDbContext>()
             .AddDefaultTokenProviders();
 
+            services.Configure<DataProtectionTokenProviderOptions>(o => o.TokenLifespan = TimeSpan.FromHours(24));
+
             services.AddSingleton<IConnectionMultiplexer>(sp =>
             {
                 var options = sp.GetRequiredService<IOptions<RedisOptions>>().Value;
-                return ConnectionMultiplexer.Connect(options.ConnectionString);
+                var redisConfig = ConfigurationOptions.Parse(options.ConnectionString);
+                redisConfig.AbortOnConnectFail = false;
+                return ConnectionMultiplexer.Connect(redisConfig);
             });
 
             services.AddScoped<IUserRepository, UserRepository>();

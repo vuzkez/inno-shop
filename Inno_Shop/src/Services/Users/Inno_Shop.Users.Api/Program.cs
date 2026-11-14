@@ -1,4 +1,6 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using Inno_Shop.Users.Application;
 using Inno_Shop.Users.Application.Options;
 using Inno_Shop.Users.Infrastructure;
 using Inno_Shop.Users.Infrastructure.Seed;
@@ -14,6 +16,7 @@ namespace Inno_Shop.Users.Api
             var builder = WebApplication.CreateBuilder(args);
 
             builder.Services.AddInfrastructure(builder.Configuration);
+            builder.Services.AddApplication();
             builder.Services.AddControllers();
 
             var jwtOptions = builder.Configuration
@@ -25,6 +28,7 @@ namespace Inno_Shop.Users.Api
                 opts.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
+                    NameClaimType = JwtRegisteredClaimNames.Name,
                     RoleClaimType = "role",
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.Zero,
@@ -34,6 +38,7 @@ namespace Inno_Shop.Users.Api
                     ValidAudience = jwtOptions!.Audience,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret))
                 };
+                opts.MapInboundClaims = false;
             });
 
             var app = builder.Build();
@@ -43,13 +48,7 @@ namespace Inno_Shop.Users.Api
 
             app.MapControllers();
 
-            if (app.Environment.IsDevelopment())
-            {
-                using (var scope = app.Services.CreateScope())
-                {
-                    await DbSeeder.SeedRolesAsync(scope.ServiceProvider);
-                }
-            }
+            await DbSeeder.InitializeAsync(app.Services);
 
             app.Run();
         }
