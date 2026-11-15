@@ -1,28 +1,59 @@
-version: '3.8'
+name: inno_shop
 
 services:
-  # SQL Server
   users-db:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: innoshop-users-db
     environment:
-      - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=YourStrong!Passw0rd
-    ports:
-      - "1433:1433"
+      ACCEPT_EULA: "Y"                      # без согласия с лицензией SQL Server не стартует
+      MSSQL_SA_PASSWORD: ${SQL_SA_PASSWORD:?Set SQL_SA_PASSWORD in .env}
     volumes:
-      - sql-data:/var/opt/mssql
+      - sql-data:/var/opt/mssql             # данные переживают удаление контейнера
+    healthcheck:                            
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -b -o /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s                     # SQL Server стартует долго - первые 20 с ошибки не считаются
 
-  # Redis
   users-redis:
-    image: redis:latest
+    image: redis:7-alpine
     container_name: innoshop-redis
-    ports:
-      - "6379:6379"
     volumes:
       - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
-# Создаем именованные тома для сохранения данных
+  inno_shop.users.api:
+    image: ${DOCKER_REGISTRY-}innoshopusersapi
+    build:
+      context: .                            # корень решения (Inno_Shop/)
+      dockerfile: src/Services/Users/Inno_Shop.Users.Api/Dockerfile
+    container_name: innoshop-users-api
+    depends_on:                             # стартуем только когда БД и Redis ПРОШЛИ healthcheck
+      users-db:
+        condition: service_healthy
+      users-redis:
+        condition: service_healthy
+    ports:
+      - "5145:8080"                       
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=users-db,1433;Database=InnoShopUsers;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True"
+      RedisSettings__ConnectionString: "users-redis:6379"
+      JwtSettings__Secret: ${JWT_SECRET:?Set JWT_SECRET (min 32 chars) in .env}
+      EmailSettings__UserName: ${EMAIL_USERNAME:-user@example.com}
+      EmailSettings__Password: ${EMAIL_PASSWORD:-change-me}
+      EmailSettings__FromEmail: ${EMAIL_FROM:-noreply@innoshop.local}
+      EmailSettings__ConfirmEmailUrl: ${CONFIRM_EMAIL_URL:-http://localhost:5145/api/auth/confirm-email}
+      EmailSettings__ResetPasswordUrl: ${RESET_PASSWORD_URL:-http://localhost:3000/reset-password}
+      AdminSeed__Email: ${ADMIN_EMAIL:-admin@innoshop.local}
+      AdminSeed__Password: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+
+# Именованные тома: данные хранит Docker, они не пропадают при `docker compose down`
+# (удаляются только командой `docker compose down -v`).
 volumes:
   sql-data:
   redis-data:

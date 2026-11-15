@@ -48,6 +48,8 @@ namespace Inno_Shop.Users.Infrastructure
                 .Validate(x => !string.IsNullOrWhiteSpace(x.UserName), "Email Error: UserName is required.")
                 .Validate(x => !string.IsNullOrWhiteSpace(x.Password), "Email Error: Password is required.")
                 .Validate(x => !string.IsNullOrWhiteSpace(x.FromName), "Email Error: FromName is required.")
+                .Validate(x => new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(x.FromEmail),
+                    "Email Error: FromEmail is not a valid email address.")
                 .ValidateOnStart();
 
             services.Configure<AdminSeedOptions>(configuration.GetSection(AdminSeedOptions.SectionName));

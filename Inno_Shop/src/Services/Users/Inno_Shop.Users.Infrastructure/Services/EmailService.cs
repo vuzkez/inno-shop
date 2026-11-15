@@ -46,15 +46,15 @@ namespace Inno_Shop.Users.Infrastructure.Services
 
         private async Task SendEmailAsync(string toEmail, string subject, string htmlBody)
         {
-            var message = new MimeMessage();
-            message.From.Add(new MailboxAddress(_options.FromName, _options.FromEmail));
-            message.To.Add(new MailboxAddress(string.Empty, toEmail));
-            message.Subject = subject;
-            message.Body = new BodyBuilder { HtmlBody = htmlBody }.ToMessageBody();
-
             using var client = new SmtpClient();
             try
             {
+                var message = new MimeMessage();
+                message.From.Add(new MailboxAddress(_options.FromName, _options.FromEmail));
+                message.To.Add(new MailboxAddress(string.Empty, toEmail));
+                message.Subject = subject;
+                message.Body = new BodyBuilder { HtmlBody = htmlBody }.ToMessageBody();
+
                 await client.ConnectAsync(_options.Host, _options.Port, SecureSocketOptions.StartTls);
                 await client.AuthenticateAsync(_options.UserName, _options.Password);
                 await client.SendAsync(message);

@@ -178,6 +178,8 @@ namespace Inno_Shop.Users.Application.Services
             if (userId == actorId)
                 return UserResult.Failure("You cannot delete your own account.", ErrorType.Forbidden);
 
+            // TODO: delete products
+
             if (!await _userRepository.DeleteUserAsync(userId))
                 return UserResult.Failure("User not found.", ErrorType.NotFound);
 

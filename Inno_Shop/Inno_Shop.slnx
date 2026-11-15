@@ -13,7 +13,8 @@
     <Project Path="src/Services/Users/Inno_Shop.Users.Infrastructure/Inno_Shop.Users.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/Tests/" />
-  <Folder Name="/Элементы решения/">
-    <File Path="docker-compose.yml" />
-  </Folder>
+  <Folder Name="/Элементы решения/" />
+  <Project Path="docker-compose.dcproj">
+    <Build />
+  </Project>
 </Solution>

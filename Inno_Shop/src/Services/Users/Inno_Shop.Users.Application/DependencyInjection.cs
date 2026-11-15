@@ -5,6 +5,8 @@ using Inno_Shop.Users.Application.Interfaces;
 using Inno_Shop.Users.Application.Options;
 using Inno_Shop.Users.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
+using FluentValidation;
+using System.Reflection;
 
 namespace Inno_Shop.Users.Application
 {
@@ -13,6 +15,7 @@ namespace Inno_Shop.Users.Application
         public static IServiceCollection AddApplication(this IServiceCollection services)
         {
             services.AddScoped<IUserService, UserService>();
+            services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
 
             return services;
         }
