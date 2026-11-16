@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
+using MassTransit;
 
 namespace Inno_Shop.Users.Infrastructure
 {
@@ -52,6 +53,20 @@ namespace Inno_Shop.Users.Infrastructure
                     "Email Error: FromEmail is not a valid email address.")
                 .ValidateOnStart();
 
+            services.AddOptions<RabbitMqOptions>()
+                .Bind(configuration.GetSection(RabbitMqOptions.SectionName))
+                .Validate(x => !string.IsNullOrWhiteSpace(x.Host),
+                    "RabbitMQ Error: Host is required.")
+                .Validate(x => x.Port > 0 && x.Port <= 65535,
+                    "RabbitMQ Error: Port must be between 1 and 65535.")
+                .Validate(x => !string.IsNullOrWhiteSpace(x.VirtualHost),
+                    "RabbitMQ Error: VirtualHost is required.")
+                .Validate(x => !string.IsNullOrWhiteSpace(x.UserName),
+                    "RabbitMQ Error: UserName is required.")
+                .Validate(x => !string.IsNullOrWhiteSpace(x.Password),
+                    "RabbitMQ Error: Password is required.")
+                .ValidateOnStart();
+
             services.Configure<AdminSeedOptions>(configuration.GetSection(AdminSeedOptions.SectionName));
 
             services.AddDbContext<UsersDbContext>((sp, opts) =>
@@ -87,10 +102,28 @@ namespace Inno_Shop.Users.Infrastructure
                 return ConnectionMultiplexer.Connect(redisConfig);
             });
 
+            services.AddMassTransit(x =>
+            {
+                x.UsingRabbitMq((context, cfg) =>
+                {
+                    var rabbitOptions = context.GetRequiredService<IOptions<RabbitMqOptions>>().Value;
+
+                    var vhost = rabbitOptions.VirtualHost.TrimStart('/');
+                    var hostUri = new Uri($"rabbitmq://{rabbitOptions.Host}:{rabbitOptions.Port}/{vhost}");
+
+                    cfg.Host(hostUri, h =>
+                    {
+                        h.Username(rabbitOptions.UserName);
+                        h.Password(rabbitOptions.Password);
+                    });
+                });
+            });
+
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IJwtProvider, JwtProvider>();
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<ITokenService, TokenService>();
+            services.AddScoped<IUserEventPublisher, UserEventPublisher>();
 
             return services;
         }

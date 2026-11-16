@@ -27,6 +27,23 @@ services:
       timeout: 3s
       retries: 5
 
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: innoshop-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-innoshop}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
+    ports:
+      - "5672:5672"      # по нему ходят сервисы
+      - "15672:15672"    # веб-интерфейс: http://localhost:15672
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   inno_shop.users.api:
     image: ${DOCKER_REGISTRY-}innoshopusersapi
     build:
@@ -37,6 +54,8 @@ services:
       users-db:
         condition: service_healthy
       users-redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     ports:
       - "5145:8080"                       
@@ -51,9 +70,15 @@ services:
       EmailSettings__ResetPasswordUrl: ${RESET_PASSWORD_URL:-http://localhost:3000/reset-password}
       AdminSeed__Email: ${ADMIN_EMAIL:-admin@innoshop.local}
       AdminSeed__Password: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      RabbitMqSettings__Host: "rabbitmq"
+      RabbitMqSettings__Port: "5672"
+      RabbitMqSettings__VirtualHost: "/"
+      RabbitMqSettings__UserName: ${RABBITMQ_USER:-innoshop}
+      RabbitMqSettings__Password: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
 
 # Именованные тома: данные хранит Docker, они не пропадают при `docker compose down`
 # (удаляются только командой `docker compose down -v`).
 volumes:
   sql-data:
   redis-data:
+  rabbitmq-data:

@@ -1,5 +1,8 @@
 <Solution>
   <Folder Name="/Services/" />
+  <Folder Name="/Services/Contracts/">
+    <Project Path="src/Services/Contracts/Inno_Shop.Contracts/Inno_Shop.Contracts.csproj" Id="e631f213-02bc-4cf5-aed3-769979cdb8a8" />
+  </Folder>
   <Folder Name="/Services/Products/">
     <Project Path="src/Services/Products/Inno_Shop.Products.Api/Inno_Shop.Products.Api.csproj" Id="c173ab8c-c1d9-4eba-97c3-efd7bc2dfac4" />
     <Project Path="src/Services/Products/Inno_Shop.Products.Application/Inno_Shop.Products.Application.csproj" />

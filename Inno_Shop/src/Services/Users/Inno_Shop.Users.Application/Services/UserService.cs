@@ -11,15 +11,18 @@ namespace Inno_Shop.Users.Application.Services
         private readonly IUserRepository _userRepository;
         private readonly IEmailService _emailService;
         private readonly ITokenService _tokenService;
+        private readonly IUserEventPublisher _userEventPublisher;
 
         public UserService(
             IUserRepository userRepository,
             IEmailService emailService,
-            ITokenService tokenService)
+            ITokenService tokenService,
+            IUserEventPublisher userEventPublisher)
         {
             _userRepository = userRepository;
             _emailService = emailService;
             _tokenService = tokenService;
+            _userEventPublisher = userEventPublisher;
         }
 
         public async Task<UserResult> RegisterAsync(RegisterRequest request)
@@ -158,7 +161,7 @@ namespace Inno_Shop.Users.Application.Services
 
             await _tokenService.RevokeAllUserTokensAsync(userId);
 
-            // TODO: deactive products
+            await _userEventPublisher.DeactivateUserProductsAsync(userId);
 
             return UserResult.Success(userId);
         }
@@ -168,7 +171,7 @@ namespace Inno_Shop.Users.Application.Services
             if (!await _userRepository.ActivateUserAsync(userId))
                 return UserResult.Failure("User not found.", ErrorType.NotFound);
 
-            // TODO: active products
+            await _userEventPublisher.ActivateUserProductsAsync(userId);
 
             return UserResult.Success(userId);
         }
@@ -178,10 +181,10 @@ namespace Inno_Shop.Users.Application.Services
             if (userId == actorId)
                 return UserResult.Failure("You cannot delete your own account.", ErrorType.Forbidden);
 
-            // TODO: delete products
-
             if (!await _userRepository.DeleteUserAsync(userId))
                 return UserResult.Failure("User not found.", ErrorType.NotFound);
+
+            await _userEventPublisher.DeleteUserProductsAsync(userId);
 
             await _tokenService.RevokeAllUserTokensAsync(userId);
 
