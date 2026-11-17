@@ -16,6 +16,9 @@
     <Project Path="src/Services/Users/Inno_Shop.Users.Infrastructure/Inno_Shop.Users.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/Tests/" />
+  <Folder Name="/Tests/Users/">
+    <Project Path="tests/Users/Inno_Shop.UnitTests/Inno_Shop.UnitTests.csproj" Id="fb7d7b12-c6e4-4e5f-a396-d993cb8ce144" />
+  </Folder>
   <Folder Name="/Элементы решения/" />
   <Project Path="docker-compose.dcproj">
     <Build />
