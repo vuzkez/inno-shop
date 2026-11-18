@@ -1,5 +1,5 @@
 services:
-  users-db:
+  sqlserver:
     ports:
       - "1433:1433"        # чтобы подключаться к БД с хоста (SSMS, Azure Data Studio, dotnet run)
 
@@ -10,3 +10,7 @@ services:
   inno_shop.users.api:
     environment:
       ASPNETCORE_ENVIRONMENT: Development   # подробные ошибки в ответах API
+
+  inno_shop.products.api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development

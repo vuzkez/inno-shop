@@ -1,15 +1,17 @@
 name: inno_shop
 
 services:
-  users-db:
+  # Один сервер SQL Server на оба микросервиса, но у каждого своя база:
+  # InnoShopUsers и InnoShopProducts. Общих таблиц нет.
+  sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: innoshop-users-db
+    container_name: innoshop-sqlserver
     environment:
       ACCEPT_EULA: "Y"                      # без согласия с лицензией SQL Server не стартует
       MSSQL_SA_PASSWORD: ${SQL_SA_PASSWORD:?Set SQL_SA_PASSWORD in .env}
     volumes:
       - sql-data:/var/opt/mssql             # данные переживают удаление контейнера
-    healthcheck:                            
+    healthcheck:
       test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -b -o /dev/null"]
       interval: 10s
       timeout: 5s
@@ -51,7 +53,7 @@ services:
       dockerfile: src/Services/Users/Inno_Shop.Users.Api/Dockerfile
     container_name: innoshop-users-api
     depends_on:                             # стартуем только когда БД и Redis ПРОШЛИ healthcheck
-      users-db:
+      sqlserver:
         condition: service_healthy
       users-redis:
         condition: service_healthy
@@ -60,7 +62,7 @@ services:
     ports:
       - "5145:8080"                       
     environment:
-      ConnectionStrings__DefaultConnection: "Server=users-db,1433;Database=InnoShopUsers;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=InnoShopUsers;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True"
       RedisSettings__ConnectionString: "users-redis:6379"
       JwtSettings__Secret: ${JWT_SECRET:?Set JWT_SECRET (min 32 chars) in .env}
       EmailSettings__UserName: ${EMAIL_USERNAME:-user@example.com}
@@ -76,8 +78,32 @@ services:
       RabbitMqSettings__UserName: ${RABBITMQ_USER:-innoshop}
       RabbitMqSettings__Password: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
 
+  inno_shop.products.api:
+    image: ${DOCKER_REGISTRY-}innoshopproductsapi
+    build:
+      context: .
+      dockerfile: src/Services/Products/Inno_Shop.Products.Api/Dockerfile
+    container_name: innoshop-products-api
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "5146:8080"                        # Users занял 5145
+    environment:
+      # Своя база на том же сервере. Миграции применяются при старте приложения.
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=InnoShopProducts;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True"
+      # Тот же секрет/issuer/audience, что у Users: токены, выданные Users, должны приниматься здесь.
+      JwtSettings__Secret: ${JWT_SECRET:?Set JWT_SECRET (min 32 chars) in .env}
+      # Через брокер приходят события деактивации/активации/удаления пользователя.
+      RabbitMqSettings__Host: "rabbitmq"
+      RabbitMqSettings__Port: "5672"
+      RabbitMqSettings__VirtualHost: "/"
+      RabbitMqSettings__UserName: ${RABBITMQ_USER:-innoshop}
+      RabbitMqSettings__Password: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
+
 # Именованные тома: данные хранит Docker, они не пропадают при `docker compose down`
-# (удаляются только командой `docker compose down -v`).
 volumes:
   sql-data:
   redis-data:
