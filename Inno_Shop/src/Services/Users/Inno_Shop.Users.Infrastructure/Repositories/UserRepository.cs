@@ -1,4 +1,4 @@
-﻿using Inno_Shop.Users.Application.Dtos;
+using Inno_Shop.Users.Application.Dtos;
 using Inno_Shop.Users.Application.Interfaces;
 using Inno_Shop.Users.Domain;
 using Inno_Shop.Users.Infrastructure.Identity;
@@ -71,11 +71,19 @@ namespace Inno_Shop.Users.Infrastructure.Repositories
 
             var userIds = appUsers.Select(u => u.Id).ToList();
 
-            var roleByUser = await _db.UserRoles
+            var roleAssignments = await _db.UserRoles
                 .Where(ur => userIds.Contains(ur.UserId))
                 .Join(_db.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => new { ur.UserId, r.Name })
-                .GroupBy(x => x.UserId)
-                .ToDictionaryAsync(g => g.Key, g => g.First().Name);
+                .ToListAsync();
+
+            var roleByUser = new Dictionary<string, string>();
+            foreach (var assignment in roleAssignments)
+            {
+                // A role name is optional on the Identity entity; skipping null keeps the previous
+                // behaviour, where a missing entry made MapToDomain fall back to Role.Customer.
+                if (!string.IsNullOrEmpty(assignment.Name))
+                    roleByUser.TryAdd(assignment.UserId, assignment.Name);
+            }
 
             var items = appUsers
                 .Select(u => MapToDomain(u, roleByUser.GetValueOrDefault(u.Id)))

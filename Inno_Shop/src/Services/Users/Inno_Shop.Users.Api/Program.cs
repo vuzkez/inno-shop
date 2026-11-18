@@ -6,6 +6,7 @@ using Inno_Shop.Users.Application.Options;
 using Inno_Shop.Users.Infrastructure;
 using Inno_Shop.Users.Infrastructure.Seed;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -60,28 +61,29 @@ namespace Inno_Shop.Users.Api
                     p.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
             }));
 
+            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer();
 
-            var jwtOptions = builder.Configuration
-                .GetSection(JwtOptions.SectionName)
-                .Get<JwtOptions>();
-
-            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(opts =>
-            {
-                opts.TokenValidationParameters = new TokenValidationParameters
+            builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+                .Configure<IOptions<JwtOptions>>((opts, jwtOptionsAccessor) =>
                 {
-                    ValidateIssuerSigningKey = true,
-                    NameClaimType = JwtRegisteredClaimNames.Name,
-                    RoleClaimType = "role",
-                    ValidateLifetime = true,
-                    ClockSkew = TimeSpan.Zero,
-                    ValidateIssuer = true,
-                    ValidIssuer = jwtOptions!.Issuer,
-                    ValidateAudience = true,
-                    ValidAudience = jwtOptions!.Audience,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret))
-                };
-                opts.MapInboundClaims = false;
-            });
+                    var jwtOptions = jwtOptionsAccessor.Value;
+
+                    opts.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuerSigningKey = true,
+                        NameClaimType = JwtRegisteredClaimNames.Name,
+                        RoleClaimType = "role",
+                        ValidateLifetime = true,
+                        ClockSkew = TimeSpan.Zero,
+                        ValidateIssuer = true,
+                        ValidIssuer = jwtOptions.Issuer,
+                        ValidateAudience = true,
+                        ValidAudience = jwtOptions.Audience,
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret))
+                    };
+                    opts.MapInboundClaims = false;
+                });
 
             var app = builder.Build();
 
