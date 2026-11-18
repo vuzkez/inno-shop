@@ -1,4 +1,13 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <!--
+      IApplicationDbContext exposes DbSet<T>, so the Application layer references EF Core.
+      This is a deliberate trade-off: no repository layer and no boilerplate, at the cost of
+      EF Core leaking into Application. See the discussion in the README.
+    -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.15" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Inno_Shop.Products.Domain\Inno_Shop.Products.Domain.csproj" />
